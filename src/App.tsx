@@ -11,6 +11,16 @@ type ModelDownloadProgress = {
   total_bytes: number | null;
 };
 
+type ModelLoadStatusPayload = {
+  downloaded: boolean;
+  loaded: boolean;
+  busy: boolean;
+  model_name: string;
+  model_path: string | null;
+  model_bytes: number | null;
+  message: string;
+};
+
 type RewriteTokenPayload = {
   token: string;
   done: boolean;
@@ -25,6 +35,10 @@ const styles: WritingStyle[] = ["Academic", "Concise", "Professional"];
 
 function App() {
   const [isModelReady, setIsModelReady] = useState(false);
+  const [isModelDownloaded, setIsModelDownloaded] = useState(false);
+  const [isModelBusy, setIsModelBusy] = useState(false);
+  const [modelName, setModelName] = useState("Qwen3-1.7B-GGUF Q8_0");
+  const [modelBytes, setModelBytes] = useState<number | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [inputText, setInputText] = useState("");
@@ -40,11 +54,20 @@ function App() {
   );
 
   useEffect(() => {
+    void refreshModelStatus();
+
     const unlistenDownload = listen<ModelDownloadProgress>(
       "model-download-progress",
       (event) => {
         setDownloadProgress(Math.round(event.payload.percent));
         setStatusMessage("Downloading model");
+      },
+    );
+
+    const unlistenModelLoad = listen<ModelLoadStatusPayload>(
+      "model-load-status",
+      (event) => {
+        applyModelStatus(event.payload);
       },
     );
 
@@ -70,24 +93,61 @@ function App() {
 
     return () => {
       void unlistenDownload.then((unlisten) => unlisten());
+      void unlistenModelLoad.then((unlisten) => unlisten());
       void unlistenTokens.then((unlisten) => unlisten());
       void unlistenRewriteStatus.then((unlisten) => unlisten());
     };
   }, []);
 
+  function applyModelStatus(payload: ModelLoadStatusPayload) {
+    setIsModelDownloaded(payload.downloaded);
+    setIsModelReady(payload.loaded);
+    setIsModelBusy(payload.busy);
+    setModelName(payload.model_name);
+    setModelBytes(payload.model_bytes);
+    setStatusMessage(payload.message);
+    if (payload.downloaded && payload.model_bytes) {
+      setDownloadProgress(100);
+    }
+  }
+
+  async function refreshModelStatus() {
+    try {
+      const status = await invoke<ModelLoadStatusPayload>("model_status");
+      applyModelStatus(status);
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : String(error));
+    }
+  }
+
   async function startSetup() {
     setIsDownloading(true);
+    setIsModelBusy(true);
     setStatusMessage("Starting download");
 
     try {
-      await invoke("download_model");
+      const status = await invoke<ModelLoadStatusPayload>("download_model");
       setDownloadProgress(100);
-      setIsModelReady(true);
-      setStatusMessage("Model ready");
+      applyModelStatus(status);
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : String(error));
     } finally {
       setIsDownloading(false);
+      setIsModelBusy(false);
+    }
+  }
+
+  async function loadLocalModel() {
+    setIsModelBusy(true);
+    setStatusMessage("Loading model into memory");
+
+    try {
+      const status = await invoke<ModelLoadStatusPayload>("load_model");
+      applyModelStatus(status);
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : String(error));
+    } finally {
+      setIsModelBusy(false);
     }
   }
 
@@ -122,9 +182,34 @@ function App() {
               Download local writing model
             </h1>
             <p className="mt-3 text-sm leading-6 text-zinc-400">
-              Qwen2.5-1.5B-Instruct GGUF will be stored in the app data folder
+              Qwen3-1.7B-GGUF will be stored in the app data folder
               and loaded locally for offline rewriting.
             </p>
+
+            <div className="mt-6 grid gap-3 text-sm">
+              <div className="flex items-center justify-between border border-zinc-800 bg-zinc-950/60 px-4 py-3">
+                <span className="text-zinc-500">Model</span>
+                <span className="text-right text-zinc-200">{modelName}</span>
+              </div>
+              <div className="grid grid-cols-3 border border-zinc-800 bg-zinc-950/60 text-center">
+                <div className="px-3 py-3">
+                  <p className="text-zinc-500">Downloaded</p>
+                  <p className={isModelDownloaded ? "text-emerald-400" : "text-zinc-400"}>
+                    {isModelDownloaded ? "Yes" : "No"}
+                  </p>
+                </div>
+                <div className="border-x border-zinc-800 px-3 py-3">
+                  <p className="text-zinc-500">Loaded</p>
+                  <p className={isModelReady ? "text-emerald-400" : "text-zinc-400"}>
+                    {isModelReady ? "Yes" : "No"}
+                  </p>
+                </div>
+                <div className="px-3 py-3">
+                  <p className="text-zinc-500">Size</p>
+                  <p className="text-zinc-300">{formatBytes(modelBytes)}</p>
+                </div>
+              </div>
+            </div>
 
             <div className="mt-8">
               <div className="mb-2 flex items-center justify-between text-sm">
@@ -141,14 +226,28 @@ function App() {
               </div>
             </div>
 
-            <button
-              className="mt-8 w-full rounded-md bg-emerald-400 px-4 py-3 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:bg-zinc-700 disabled:text-zinc-400"
-              disabled={isDownloading}
-              onClick={startSetup}
-              type="button"
-            >
-              {isDownloading ? "Preparing..." : "Start Setup"}
-            </button>
+            <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <button
+                className="rounded-md bg-zinc-800 px-4 py-3 text-sm font-semibold text-zinc-100 transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-zinc-500"
+                disabled={isDownloading || isModelBusy}
+                onClick={refreshModelStatus}
+                type="button"
+              >
+                Check Model
+              </button>
+              <button
+                className="rounded-md bg-emerald-400 px-4 py-3 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:bg-zinc-700 disabled:text-zinc-400"
+                disabled={isDownloading || isModelBusy}
+                onClick={isModelDownloaded ? loadLocalModel : startSetup}
+                type="button"
+              >
+                {isDownloading || isModelBusy
+                  ? "Preparing..."
+                  : isModelDownloaded
+                    ? "Load Model"
+                    : "Start Setup"}
+              </button>
+            </div>
           </div>
         </section>
       ) : (
@@ -160,6 +259,9 @@ function App() {
                   Thesis Rewriter
                 </p>
                 <h1 className="text-2xl font-semibold text-white">Input</h1>
+                <p className="mt-1 text-sm text-zinc-500">
+                  LLM loaded: {modelName}
+                </p>
               </div>
               <div
                 aria-label="Writing style"
@@ -221,6 +323,23 @@ function App() {
       )}
     </main>
   );
+}
+
+function formatBytes(bytes: number | null) {
+  if (!bytes) {
+    return "--";
+  }
+
+  const units = ["B", "KB", "MB", "GB"];
+  let value = bytes;
+  let unitIndex = 0;
+
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024;
+    unitIndex += 1;
+  }
+
+  return `${value.toFixed(unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
 }
 
 export default App;

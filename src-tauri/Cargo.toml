@@ -24,6 +24,7 @@ tokio = { version = "1.45", features = ["macros", "rt-multi-thread", "fs", "io-u
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "stream"] }
 futures-util = "0.3"
 llama-cpp-2 = "0.1.146"
+encoding_rs = "0.8"
 
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
