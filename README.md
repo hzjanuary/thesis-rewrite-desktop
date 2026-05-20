@@ -1,46 +1,46 @@
 # Thesis Rewriter
 
-Native desktop app hỗ trợ viết lại và đánh bóng văn bản học thuật bằng mô hình ngôn ngữ chạy cục bộ. Ứng dụng dùng Tauri v2 để đưa giao diện React vào desktop shell gọn nhẹ, còn phần tải model và inference GGUF chạy trong Rust thông qua `llama.cpp`.
+A native desktop app for rewriting and polishing academic text with a local language model. The app uses Tauri v2 to run a React interface inside a lightweight desktop shell, while model downloads and GGUF inference run in Rust through `llama.cpp`.
 
-## Tổng Quan
+## Overview
 
-Thesis Rewriter được thiết kế theo hướng offline-first:
+Thesis Rewriter is designed as an offline-first application:
 
-- Lần đầu mở app, backend Rust tải model GGUF từ Hugging Face vào thư mục dữ liệu ứng dụng của hệ điều hành.
-- Frontend React nhận tiến độ tải model qua Tauri event và hiển thị màn hình setup.
-- Sau khi model đã tải xong, Rust load model vào bộ nhớ cục bộ bằng `llama-cpp-2`.
-- Khi người dùng rewrite văn bản, frontend gọi Tauri command `rewrite_text`; backend sinh kết quả từng token và đẩy về UI bằng event `rewrite-token`.
-- App không gọi API AI bên ngoài trong quá trình rewrite sau khi model đã được tải về.
+- On first launch, the Rust backend downloads a GGUF model from Hugging Face into the operating system's application data directory.
+- The React frontend receives model download progress through Tauri events and displays a setup screen.
+- After the model has been downloaded, Rust loads it into local memory with `llama-cpp-2`.
+- When the user rewrites text, the frontend calls the `rewrite_text` Tauri command; the backend generates the result token by token and streams it back to the UI with the `rewrite-token` event.
+- After the model has been downloaded, the app does not call any external AI API during rewriting.
 
-## Tính Năng
+## Features
 
-- Native desktop app bằng Tauri v2, không cần bundle browser runtime riêng.
-- Giao diện React + TypeScript + Tailwind CSS 4, dark mode mặc định.
-- Màn hình first-launch setup với progress bar tải model.
-- Editor chia đôi: input bên trái, output streaming bên phải.
-- Ba style rewrite: `Academic`, `Concise`, `Professional`.
-- Model GGUF được lưu trong app data folder, không bundle vào installer.
-- Token streaming cho hiệu ứng gõ chữ từ local inference.
+- Native desktop app built with Tauri v2, without bundling a separate browser runtime.
+- React + TypeScript + Tailwind CSS 4 interface with dark mode by default.
+- First-launch setup screen with a model download progress bar.
+- Split editor layout: input on the left, streaming output on the right.
+- Three rewrite styles: `Academic`, `Concise`, and `Professional`.
+- GGUF model stored in the application data folder, not bundled into the installer.
+- Token streaming for a typing effect powered by local inference.
 
-## Trạng Thái Hiện Tại
+## Current Status
 
-Dự án đã có scaffold và core flow cơ bản:
+The project already includes the scaffold and the core application flow:
 
-- Frontend: [src/App.tsx](src/App.tsx) và [src/App.css](src/App.css).
-- Backend Tauri/Rust: [src-tauri/src/main.rs](src-tauri/src/main.rs).
-- Cấu hình Tauri: [src-tauri/tauri.conf.json](src-tauri/tauri.conf.json).
-- Dependency Rust: [src-tauri/Cargo.toml](src-tauri/Cargo.toml).
+- Frontend: [src/App.tsx](src/App.tsx) and [src/App.css](src/App.css).
+- Tauri/Rust backend: [src-tauri/src/main.rs](src-tauri/src/main.rs).
+- Tauri configuration: [src-tauri/tauri.conf.json](src-tauri/tauri.conf.json).
+- Rust dependencies: [src-tauri/Cargo.toml](src-tauri/Cargo.toml).
 
-Model đang được cấu hình trong source:
+The model is currently configured in source code:
 
 ```text
 Repository: Qwen/Qwen3-1.7B-GGUF
 File:       Qwen3-1.7B-Q8_0.gguf
-Size:       khoảng 1.83 GB
+Size:       approximately 1.83 GB
 License:    Apache-2.0
 ```
 
-Ghi chú: tài liệu yêu cầu ban đầu có nhắc Qwen2.5-1.5B-Instruct 4-bit, nhưng code hiện tại đang dùng Qwen3-1.7B-GGUF Q8_0. README này mô tả theo đúng source hiện tại.
+Note: the original project requirements mentioned Qwen2.5-1.5B-Instruct 4-bit, but the current code uses Qwen3-1.7B-GGUF Q8_0. This README describes the current source code.
 
 ## Tech Stack
 
@@ -51,117 +51,117 @@ Ghi chú: tài liệu yêu cầu ban đầu có nhắc Qwen2.5-1.5B-Instruct 4-b
 - Download streaming: `reqwest`, `tokio`, `futures-util`
 - Model format: GGUF
 
-## Yêu Cầu Hệ Thống
+## System Requirements
 
-Cần cài sẵn:
+Required tools:
 
-- Node.js 20+ khuyến nghị
+- Node.js 20+ recommended
 - npm
-- Rust stable và Cargo
-- Tauri system dependencies theo hệ điều hành
-- Kết nối Internet cho lần tải model đầu tiên
-- Tối thiểu 3-4 GB RAM trống cho model Q8_0 và context inference cơ bản
+- Rust stable and Cargo
+- Tauri system dependencies for your operating system
+- Internet connection for the first model download
+- At least 3-4 GB of free RAM for the Q8_0 model and a basic inference context
 
-Linux cần thêm các gói WebKit/GTK theo distro. Xem hướng dẫn prerequisites của Tauri v2 nếu build trên máy mới.
+Linux also requires the WebKit/GTK packages for your distribution. See the Tauri v2 prerequisites if you are building on a new machine.
 
-## Cài Đặt
+## Installation
 
 ```bash
 npm install
 ```
 
-Nếu dependency Rust chưa được fetch, Cargo sẽ tự tải khi chạy `cargo check`, `npm run tauri dev` hoặc `npm run tauri build`.
+If Rust dependencies have not been fetched yet, Cargo will download them when you run `cargo check`, `npm run tauri dev`, or `npm run tauri build`.
 
-## Chạy Development
+## Development
 
-Chạy app desktop:
+Run the desktop app:
 
 ```bash
 npm run tauri dev
 ```
 
-Chạy riêng frontend Vite để kiểm tra UI trong browser:
+Run only the Vite frontend to inspect the UI in a browser:
 
 ```bash
 npm run dev
 ```
 
-Lưu ý: chế độ browser chỉ kiểm tra UI. Các Tauri command như `download_model`, `load_model`, `rewrite_text` cần chạy trong Tauri runtime.
+Note: browser mode is only useful for checking the UI. Tauri commands such as `download_model`, `load_model`, and `rewrite_text` require the Tauri runtime.
 
 ## Build
 
-Build frontend:
+Build the frontend:
 
 ```bash
 npm run build
 ```
 
-Kiểm tra Rust backend:
+Check the Rust backend:
 
 ```bash
 cd src-tauri
 cargo check
 ```
 
-Build gói desktop:
+Build the desktop package:
 
 ```bash
 npm run tauri build
 ```
 
-Output installer/binary nằm trong `src-tauri/target/release/bundle/` tùy theo platform.
+The installer or binary output is generated under `src-tauri/target/release/bundle/`, depending on the target platform.
 
-## Luồng Sử Dụng
+## Usage Flow
 
-1. Mở app bằng `npm run tauri dev` hoặc bản build.
-2. Nếu model chưa có, app hiện màn hình setup.
-3. Bấm `Start Setup` để tải model GGUF từ Hugging Face.
-4. Backend lưu model vào app data folder của hệ điều hành.
-5. Khi model load xong, app chuyển sang editor.
-6. Dán văn bản học thuật vào input.
-7. Chọn style rewrite.
-8. Bấm `Rewrite`.
-9. Kết quả được stream từng token vào panel output.
+1. Open the app with `npm run tauri dev` or a built release.
+2. If the model is missing, the app shows the setup screen.
+3. Click `Start Setup` to download the GGUF model from Hugging Face.
+4. The backend stores the model in the operating system's app data folder.
+5. After the model has loaded, the app switches to the editor.
+6. Paste academic text into the input panel.
+7. Choose a rewrite style.
+8. Click `Rewrite`.
+9. The result streams token by token into the output panel.
 
-## Thư Mục Lưu Model
+## Model Storage Directory
 
-Backend dùng `app.path().app_data_dir()` của Tauri, sau đó tạo path:
+The backend uses Tauri's `app.path().app_data_dir()`, then creates this path:
 
 ```text
 <app-data-dir>/models/Qwen--Qwen3-1.7B-GGUF/Qwen3-1.7B-Q8_0.gguf
 ```
 
-Vị trí `<app-data-dir>` phụ thuộc hệ điều hành và cấu hình Tauri. Thường gặp:
+The exact `<app-data-dir>` location depends on the operating system and the Tauri configuration. Common locations include:
 
-- Windows: trong vùng `%APPDATA%` hoặc `%LOCALAPPDATA%`
-- macOS: trong `~/Library/Application Support/`
-- Linux: trong `~/.local/share/`
+- Windows: under `%APPDATA%` or `%LOCALAPPDATA%`
+- macOS: under `~/Library/Application Support/`
+- Linux: under `~/.local/share/`
 
-Model không nằm trong installer và có thể được xóa thủ công nếu cần tải lại.
+The model is not included in the installer and can be deleted manually if it needs to be downloaded again.
 
-## Tauri Commands Và Events
+## Tauri Commands And Events
 
-Frontend gọi Rust bằng `invoke` và nghe event bằng `listen`.
+The frontend calls Rust with `invoke` and listens for events with `listen`.
 
 ### Commands
 
-| Command | Tham số | Mô tả |
+| Command | Parameters | Description |
 | --- | --- | --- |
-| `model_status` | none | Kiểm tra model đã tải/đã load chưa |
-| `download_model` | none | Tải GGUF vào app data folder, sau đó load model |
-| `load_model` | none | Load model đã tải sẵn vào bộ nhớ |
-| `rewrite_text` | `{ text, style }` | Rewrite văn bản và stream token về frontend |
+| `model_status` | none | Checks whether the model has been downloaded and loaded |
+| `download_model` | none | Downloads the GGUF file into the app data folder, then loads the model |
+| `load_model` | none | Loads an already downloaded model into memory |
+| `rewrite_text` | `{ text, style }` | Rewrites text and streams tokens back to the frontend |
 
 ### Events
 
-| Event | Payload | Mô tả |
+| Event | Payload | Description |
 | --- | --- | --- |
-| `model-download-progress` | `{ percent, downloaded_bytes, total_bytes }` | Tiến độ tải model |
-| `model-load-status` | `{ downloaded, loaded, busy, model_name, model_path, model_bytes, message }` | Trạng thái model |
-| `rewrite-status` | `{ message, busy }` | Trạng thái inference |
-| `rewrite-token` | `{ token, done }` | Token output streaming |
+| `model-download-progress` | `{ percent, downloaded_bytes, total_bytes }` | Model download progress |
+| `model-load-status` | `{ downloaded, loaded, busy, model_name, model_path, model_bytes, message }` | Model status |
+| `rewrite-status` | `{ message, busy }` | Inference status |
+| `rewrite-token` | `{ token, done }` | Streaming output token |
 
-## Kiến Trúc
+## Architecture
 
 ```text
 React UI
@@ -177,54 +177,54 @@ Rust commands
   |-- rewrite_text   -> llama context + sampler -> token events
 ```
 
-State model được giữ trong `Mutex<ModelState>`:
+Model state is stored in `Mutex<ModelState>`:
 
 - `LlamaBackend`
 - `LlamaModel`
-- path model đã load
-- tên model hiển thị
+- loaded model path
+- display model name
 
-Mỗi lần rewrite, backend tạo context inference riêng với:
+For each rewrite request, the backend creates a dedicated inference context with:
 
-- context window: `4096` token
-- giới hạn output: `700` token
+- context window: `4096` tokens
+- output limit: `700` tokens
 - sampler: `top_k(20)`, `top_p(0.8)`, `temp(0.7)`
-- prompt system có `/no_think` để ưu tiên output ngắn gọn, không hiện reasoning
+- system prompt containing `/no_think` to prefer concise output without visible reasoning
 
-## Cấu Trúc Dự Án
+## Project Structure
 
 ```text
 .
 ├── src/
-│   ├── App.tsx              # UI setup screen và editor
-│   ├── App.css              # Tailwind import và CSS phụ trợ
+│   ├── App.tsx              # Setup screen and editor UI
+│   ├── App.css              # Tailwind import and supporting CSS
 │   └── main.tsx             # React entrypoint
 ├── src-tauri/
-│   ├── src/main.rs          # Tauri commands, download, load model, inference
+│   ├── src/main.rs          # Tauri commands, download, model loading, inference
 │   ├── src/lib.rs           # Tauri library entrypoint template
 │   ├── Cargo.toml           # Rust dependencies
 │   ├── tauri.conf.json      # Tauri app config
 │   └── capabilities/        # Tauri v2 capability permissions
 ├── public/                  # Static Vite assets
-├── package.json             # npm scripts và frontend deps
-├── vite.config.ts           # Vite config cho Tauri
+├── package.json             # npm scripts and frontend dependencies
+├── vite.config.ts           # Vite config for Tauri
 └── README.md
 ```
 
 ## Scripts
 
-| Script | Mô tả |
+| Script | Description |
 | --- | --- |
-| `npm run dev` | Chạy Vite dev server |
-| `npm run build` | Typecheck frontend và build Vite |
-| `npm run preview` | Preview frontend build |
-| `npm run tauri` | Gọi Tauri CLI |
-| `npm run tauri dev` | Chạy desktop app ở dev mode |
-| `npm run tauri build` | Build desktop bundle |
+| `npm run dev` | Runs the Vite dev server |
+| `npm run build` | Typechecks the frontend and builds Vite |
+| `npm run preview` | Previews the frontend build |
+| `npm run tauri` | Runs the Tauri CLI |
+| `npm run tauri dev` | Runs the desktop app in development mode |
+| `npm run tauri build` | Builds the desktop bundle |
 
-## Cấu Hình Model
+## Model Configuration
 
-Model được cấu hình tại [src-tauri/src/main.rs](src-tauri/src/main.rs):
+The model is configured in [src-tauri/src/main.rs](src-tauri/src/main.rs):
 
 ```rust
 const MODEL_REPO: &str = "Qwen/Qwen3-1.7B-GGUF";
@@ -234,68 +234,68 @@ const MODEL_URL: &str =
 const MODEL_DISPLAY_NAME: &str = "Qwen3-1.7B-GGUF Q8_0";
 ```
 
-Nếu đổi sang model khác, cần đảm bảo:
+If you switch to another model, make sure that:
 
-- File là GGUF tương thích llama.cpp.
-- Model có chat template phù hợp, hoặc fallback `chatml` có thể chấp nhận được.
-- Dung lượng model phù hợp với RAM máy người dùng.
-- License model cho phép mục đích sử dụng của ứng dụng.
+- The file is a GGUF file compatible with llama.cpp.
+- The model has a suitable chat template, or the `chatml` fallback is acceptable.
+- The model size fits the target user's available RAM.
+- The model license permits the intended use of the application.
 
-## Bảo Mật Và Riêng Tư
+## Security And Privacy
 
-- Nội dung rewrite được xử lý cục bộ sau khi model đã được tải.
-- App cần Internet để tải model lần đầu từ Hugging Face.
-- Model file được lưu ngoài installer trong app data folder.
-- Tauri capability hiện tại chỉ bật `core:default` và `opener:default`.
+- Rewrite content is processed locally after the model has been downloaded.
+- The app needs Internet access for the first model download from Hugging Face.
+- The model file is stored outside the installer in the app data folder.
+- The current Tauri capability configuration only enables `core:default` and `opener:default`.
 
 ## Troubleshooting
 
-### `Start Setup` tải model chậm hoặc lỗi
+### `Start Setup` is slow or the model download fails
 
-Kiểm tra kết nối Internet và dung lượng đĩa còn trống. Model Q8_0 khoảng 1.83 GB, file tạm `.part` sẽ được tạo trong lúc tải.
+Check your Internet connection and available disk space. The Q8_0 model is approximately 1.83 GB, and a temporary `.part` file is created while downloading.
 
-### App báo `Model downloaded but not loaded`
+### The app reports `Model downloaded but not loaded`
 
-Bấm `Load Model`. Nếu vẫn lỗi, xóa file model trong app data folder rồi tải lại.
+Click `Load Model`. If the problem persists, delete the model file from the app data folder and download it again.
 
-### Lỗi `Input is too long for the current 4096-token local context`
+### `Input is too long for the current 4096-token local context`
 
-Rút ngắn input. Context hiện tại đặt `4096` token và output tối đa `700` token.
+Shorten the input. The current context is set to `4096` tokens and the maximum output is `700` tokens.
 
-### Build Tauri trên Linux lỗi WebKit/GTK
+### Tauri build fails on Linux with WebKit/GTK errors
 
-Cài đúng system dependencies theo Tauri prerequisites cho distro đang dùng.
+Install the correct Tauri system dependencies for your distribution.
 
-### Inference lặp lại hoặc chất lượng chưa ổn định
+### Inference repeats itself or quality is unstable
 
-Cần tinh chỉnh sampler, prompt, `presence_penalty` hoặc chọn quantization khác. Qwen khuyến nghị tham số khác nhau cho thinking và non-thinking mode; app hiện dùng `/no_think` và sampling gần với khuyến nghị non-thinking.
+Tune the sampler, prompt, `presence_penalty`, or choose another quantization. Qwen recommends different parameters for thinking and non-thinking modes; the app currently uses `/no_think` and sampling values close to the non-thinking recommendations.
 
-## Kiểm Tra Đã Thực Hiện
+## Verification
 
-Tại thời điểm cập nhật README:
+At the time this README was updated:
 
 ```bash
 npm run build
 cd src-tauri && cargo check
 ```
 
-Cả hai lệnh đều hoàn tất thành công.
+Both commands completed successfully.
 
-## Roadmap Gợi Ý
+## Suggested Roadmap
 
-- Thêm nút hủy inference đang chạy.
-- Thêm tùy chọn model/quantization trong UI.
-- Thêm checksum sau khi tải model.
-- Thêm resume download nếu file `.part` đã tồn tại.
-- Thêm logging bằng `tauri-plugin-log`.
-- Thêm export/copy output.
-- Thêm test cho prompt builder và model path.
-- Tách backend inference thành module riêng thay vì giữ tất cả trong `main.rs`.
+- Add a button to cancel a running inference request.
+- Add model and quantization selection in the UI.
+- Add checksum verification after model download.
+- Add download resume support when a `.part` file already exists.
+- Add logging with `tauri-plugin-log`.
+- Add output copy/export actions.
+- Add tests for the prompt builder and model path handling.
+- Move backend inference into a dedicated module instead of keeping everything in `main.rs`.
 
-## Tham Khảo
+## References
 
 - Tauri v2 docs: https://v2.tauri.app/
-- Tauri command và event IPC: https://v2.tauri.app/develop/calling-rust/
+- Tauri command and event IPC: https://v2.tauri.app/develop/calling-rust/
 - Tauri create project: https://v2.tauri.app/start/
 - llama.cpp: https://github.com/ggml-org/llama.cpp
 - `llama-cpp-2` crate: https://docs.rs/llama-cpp-2/latest/llama_cpp_2/
@@ -304,4 +304,6 @@ Cả hai lệnh đều hoàn tất thành công.
 
 ## License
 
-Chưa có file `LICENSE` trong repository. Nên thêm license cho source code trước khi public. Model Qwen3-1.7B-GGUF trên Hugging Face được công bố với license Apache-2.0; vẫn cần đọc model card và điều khoản liên quan trước khi phân phối ứng dụng.
+This project is licensed under the MIT License. See [LICENSE.txt](LICENSE.txt).
+
+The Qwen3-1.7B-GGUF model on Hugging Face is published under the Apache-2.0 license. Review the model card and related terms before distributing the application.
